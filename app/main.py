@@ -1,16 +1,18 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 
-from .database import SessionLocal, engine, Base
-from . import schemas, crud
-
-# Create database tables
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="User Authentication API")
+from app import models, schemas
+from app.database import engine, SessionLocal
 
 
-# Database Dependency
+# Database tables create
+models.Base.metadata.create_all(bind=engine)
+
+
+app = FastAPI()
+
+
+# Database connection
 def get_db():
     db = SessionLocal()
     try:
@@ -19,50 +21,47 @@ def get_db():
         db.close()
 
 
-# Signup Endpoint
+# Home route
+@app.get("/")
+def home():
+    return {"message": "FastAPI Auth API Running"}
+
+
+# Signup API
 @app.post("/signup")
-def signup(user: schemas.UserSignup, db: Session = Depends(get_db)):
-    new_user = crud.create_user(db, user)
+def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
-    if new_user is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Username or Email already exists"
-        )
-
-    return {"message": "User created successfully"}
-
-
-# Login Endpoint
-@app.post("/login")
-def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
-    db_user = crud.authenticate_user(
-        db,
-        user.username_or_email,
-        user.password
+    new_user = models.User(
+        username=user.username,
+        email=user.email,
+        hashed_password=user.password
     )
 
-    if db_user is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid username/email or password"
-        )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
 
-    return {
-        "access_token": "dummy_token_12345",
-        "token_type": "bearer"
-    }
+    return new_user
 
 
-# Get User Endpoint
-@app.get("/users/{user_id}", response_model=schemas.UserResponse)
+# Get all users
+@app.get("/users")
+def get_users(db: Session = Depends(get_db)):
+
+    users = db.query(models.User).all()
+
+    return users
+
+
+# Get user by ID
+@app.get("/users/{user_id}")
 def get_user(user_id: int, db: Session = Depends(get_db)):
-    user = crud.get_user(db, user_id)
+
+    user = db.query(models.User).filter(
+        models.User.id == user_id
+    ).first()
 
     if user is None:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found"
-        )
+        return {"message": "User not found"}
 
     return user
