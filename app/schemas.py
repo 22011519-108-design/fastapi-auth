@@ -1,18 +1,27 @@
-from pydantic import BaseModel
-from datetime import datetime
+from pydantic import BaseModel, EmailStr
 
+
+# ---------- Signup ----------
 
 class UserCreate(BaseModel):
     username: str
-    email: str
+    email: EmailStr
     password: str
 
+
+# ---------- Login ----------
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
+# ---------- Response ----------
 
 class UserResponse(BaseModel):
     id: int
     username: str
-    email: str
-    created_at: datetime
+    email: EmailStr
 
     class Config:
         from_attributes = True
