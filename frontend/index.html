@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>FastAPI User Portal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <h1>✨ FastAPI User Portal ✨</h1>
+
+
+    <!-- Signup -->
+    <div class="card">
+
+        <h2>📝 Create Account</h2>
+
+        <input id="signup_username" type="text" placeholder="Username">
+
+        <input id="signup_email" type="email" placeholder="Email">
+
+        <input id="signup_password" type="password" placeholder="Password">
+
+
+        <button onclick="signup()">Signup</button>
+
+
+        <div id="signup_message" class="result">
+            Waiting for signup response...
+        </div>
+
+    </div>
+
+
+
+
+    <!-- Login -->
+    <div class="card">
+
+        <h2>🔐 Login</h2>
+
+
+        <input id="login_email" type="email" placeholder="Email">
+
+        <input id="login_password" type="password" placeholder="Password">
+
+
+        <button onclick="login()">Login</button>
+
+
+        <div id="login_message" class="result">
+            Waiting for login response...
+        </div>
+
+    </div>
+
+
+
+
+    <!-- Get User -->
+    <div class="card">
+
+        <h2>👤 Find User</h2>
+
+
+        <input id="user_id" type="number" placeholder="Enter User ID">
+
+
+        <button onclick="getUser()">Get User</button>
+
+
+        <div id="user_result" class="result">
+            User details will appear here...
+        </div>
+
+    </div>
+
+
+
+
+    <!-- WebSocket -->
+    <div class="card">
+
+        <h2>💬 WebSocket Chat</h2>
+
+
+        <input id="ws_message" 
+               type="text" 
+               placeholder="Type your message">
+
+
+        <button onclick="sendMessage()">
+            Send
+        </button>
+
+
+        <div id="ws_result" class="result">
+            WebSocket messages will appear here...
+        </div>
+
+
+    </div>
+
+
+
+</div>
+
+
+
+<script src="script.js"></script>
+
+
+</body>
+
+</html>
