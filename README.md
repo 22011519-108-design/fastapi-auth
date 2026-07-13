@@ -30,3 +30,20 @@ uvicorn app.main:app --reload
 Open API documentation:
 
 http://127.0.0.1:8000/docs
+
+# FastAPI Modular Architecture
+
+## Modules
+- Auth
+- Users
+- WebSocket (In Progress)
+
+## Architecture
+
+Router
+↓
+Service
+↓
+Repository
+↓
+Database
