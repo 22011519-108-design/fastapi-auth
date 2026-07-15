@@ -2,7 +2,7 @@ import os
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "sqlite:///./users.db"
+    "postgresql://postgres:2811@localhost:5432/fastapi_db"
 )
 
 SECRET_KEY = os.getenv(

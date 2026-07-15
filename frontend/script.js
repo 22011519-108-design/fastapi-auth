@@ -33,14 +33,12 @@ async function signup() {
 }
 
 
-
 // ================= LOGIN =================
 
 async function login() {
 
     let email = document.getElementById("login_email").value;
     let password = document.getElementById("login_password").value;
-
 
     try {
 
@@ -55,15 +53,23 @@ async function login() {
             })
         });
 
-
         let data = await response.json();
-
 
         document.getElementById("login_message").innerHTML =
             `<pre>${JSON.stringify(data, null, 2)}</pre>`;
 
+        // Save JWT token
+        if (data.access_token) {
 
-    } catch(error){
+            localStorage.setItem("access_token", data.access_token);
+
+            setTimeout(() => {
+                window.location.href = "/static/chat.html";
+            }, 1000);
+
+        }
+
+    } catch (error) {
 
         document.getElementById("login_message").innerHTML =
             "❌ Error: " + error.message;
@@ -72,81 +78,82 @@ async function login() {
 }
 
 
-
-
 // ================= GET USER =================
 
-async function getUser(){
+async function getUser() {
 
     let id = document.getElementById("user_id").value;
 
-
-    try{
+    try {
 
         let response = await fetch(
             `http://127.0.0.1:8000/users/${id}`
         );
 
-
         let data = await response.json();
-
 
         document.getElementById("user_result").innerHTML =
             `<pre>${JSON.stringify(data, null, 2)}</pre>`;
 
-
-    }catch(error){
+    } catch (error) {
 
         document.getElementById("user_result").innerHTML =
             "❌ Error: " + error.message;
     }
 
 }
-
-
 
 
 // ================= WEBSOCKET =================
 
 let socket;
 
+function sendMessage() {
 
-function sendMessage(){
+    if (!socket) {
 
-
-    if(!socket){
+        const token = localStorage.getItem("access_token");
 
         socket = new WebSocket(
-            "ws://127.0.0.1:8000/ws"
+            `ws://127.0.0.1:8000/ws?token=${token}`
         );
 
-
-        socket.onopen = function(){
+        socket.onopen = function () {
 
             document.getElementById("ws_result").innerHTML +=
-            "<br>✅ Connected";
+                "<br>✅ Connected";
 
         };
 
-
-        socket.onmessage = function(event){
+        socket.onmessage = function (event) {
 
             document.getElementById("ws_result").innerHTML +=
-            `<br>Server: ${event.data}`;
+                `<br>Server: ${event.data}`;
 
         };
 
+        socket.onclose = function () {
+
+            document.getElementById("ws_result").innerHTML +=
+                "<br>❌ Connection Closed";
+
+        };
+
+        socket.onerror = function () {
+
+            document.getElementById("ws_result").innerHTML +=
+                "<br>❌ Connection Error";
+
+        };
     }
 
-
-    let message =
-    document.getElementById("ws_message").value;
-
+    let message = document.getElementById("ws_message").value;
 
     socket.send(message);
 
-
     document.getElementById("ws_result").innerHTML +=
-    `<br>You: ${message}`;
+        `<br>You: ${message}`;
+
+    document.getElementById("ws_message").value = "";
 
 }
