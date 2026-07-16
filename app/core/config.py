@@ -1,14 +1,17 @@
 import os
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:2811@localhost:5432/fastapi_db"
-)
+from dotenv import load_dotenv
 
-SECRET_KEY = os.getenv(
-    "SECRET_KEY",
-    "my-super-secret-key"
-)
+load_dotenv()
+
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 ALGORITHM = "HS256"
 
