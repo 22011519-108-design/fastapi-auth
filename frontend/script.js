@@ -106,54 +106,104 @@ async function getUser() {
 
 // ================= WEBSOCKET =================
 
-let socket;
+let socket = null;
+
+function addMessage(text, sender) {
+
+    const chatBox = document.getElementById("chat-box");
+
+    const message = document.createElement("div");
+    message.className = `message ${sender}`;
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.innerText = text;
+
+    message.appendChild(bubble);
+    chatBox.appendChild(message);
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function connectSocket() {
+
+    const token = localStorage.getItem("access_token");
+
+    socket = new WebSocket(
+        `ws://127.0.0.1:8000/ws?token=${token}`
+    );
+
+    socket.onopen = function () {
+
+        addMessage("Connected ✅", "bot");
+
+    };
+
+    socket.onmessage = function (event) {
+
+        addMessage(event.data, "bot");
+
+    };
+
+    socket.onclose = function () {
+
+        addMessage("Connection Closed ❌", "bot");
+
+    };
+
+    socket.onerror = function () {
+
+        addMessage("Connection Error ❌", "bot");
+
+    };
+
+}
 
 function sendMessage() {
 
-    if (!socket) {
+    const input = document.getElementById("ws_message");
+    const message = input.value.trim();
 
-        const token = localStorage.getItem("access_token");
+    if (message === "") return;
 
-        socket = new WebSocket(
-            `ws://127.0.0.1:8000/ws?token=${token}`
-        );
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+
+        connectSocket();
 
         socket.onopen = function () {
 
-            document.getElementById("ws_result").innerHTML +=
-                "<br>✅ Connected";
+            addMessage("Connected ✅", "bot");
+
+            socket.send(message);
+
+            addMessage(message, "user");
 
         };
 
-        socket.onmessage = function (event) {
+    } else {
 
-            document.getElementById("ws_result").innerHTML +=
-                `<br>Server: ${event.data}`;
+        socket.send(message);
 
-        };
+        addMessage(message, "user");
 
-        socket.onclose = function () {
-
-            document.getElementById("ws_result").innerHTML +=
-                "<br>❌ Connection Closed";
-
-        };
-
-        socket.onerror = function () {
-
-            document.getElementById("ws_result").innerHTML +=
-                "<br>❌ Connection Error";
-
-        };
     }
 
-    let message = document.getElementById("ws_message").value;
-
-    socket.send(message);
-
-    document.getElementById("ws_result").innerHTML +=
-        `<br>You: ${message}`;
-
-    document.getElementById("ws_message").value = "";
+    input.value = "";
 
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    const input = document.getElementById("ws_message");
+
+    input.addEventListener("keypress", function (e) {
+
+        if (e.key === "Enter") {
+
+            sendMessage();
+
+        }
+
+    });
+
+});

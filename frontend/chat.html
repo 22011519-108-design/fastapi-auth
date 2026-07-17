@@ -1,31 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>Chat</title>
+    <title>AI Chat</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
 
 <div class="container">
 
-    <h1>💬 Chat Room</h1>
+    <h1>💬 AI Assistant</h1>
 
-    <input
-        id="ws_message"
-        type="text"
-        placeholder="Type message"
-    >
+    <div id="chat-box" class="chat-box">
 
-    <button onclick="sendMessage()">
-        Send
-    </button>
+    </div>
 
-    <div id="ws_result" class="result"></div>
+    <div class="chat-input">
+
+        <input
+            id="ws_message"
+            type="text"
+            placeholder="Type your message..."
+            onkeypress="if(event.key==='Enter') sendMessage()"
+        >
+
+        <button onclick="sendMessage()">
+            Send
+        </button>
+
+    </div>
 
 </div>
 
 <script src="/static/script.js"></script>
 
 </body>
+
 </html>

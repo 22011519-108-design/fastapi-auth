@@ -1,11 +1,21 @@
-from google import genai
-from google.genai.errors import ServerError
+import time
 
-from app.core.config import GEMINI_API_KEY
+from groq import Groq
+
+from app.core.config import GROQ_API_KEY
 from app.modules.chat.models import ChatMessage
 
+client = Groq(api_key=GROQ_API_KEY)
 
-client = genai.Client(api_key=GEMINI_API_KEY)
+SYSTEM_PROMPT = """
+You are a helpful AI assistant.
+
+Instructions:
+- Answer clearly and accurately.
+- Be polite and professional.
+- Maintain conversation context.
+- If you don't know the answer, say so instead of guessing.
+"""
 
 
 def build_messages(history: list[ChatMessage]) -> list[dict]:
@@ -13,7 +23,12 @@ def build_messages(history: list[ChatMessage]) -> list[dict]:
     Convert chat history into LLM message format.
     """
 
-    messages = []
+    messages = [
+        {
+            "role": "system",
+            "content": SYSTEM_PROMPT
+        }
+    ]
 
     for msg in history:
         messages.append(
@@ -28,26 +43,38 @@ def build_messages(history: list[ChatMessage]) -> list[dict]:
 
 def generate_response(messages: list[dict]) -> str:
     """
-    Generate AI response using Gemini.
+    Generate AI response using Groq.
     """
 
-    prompt = (
-        "You are a helpful AI assistant.\n\n"
-    )
+    for attempt in range(3):
 
-    for message in messages:
-        prompt += f"{message['role']}: {message['content']}\n"
+        try:
 
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
-        )
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=messages,
+                temperature=0.7,
+                max_tokens=500,
+            )
 
-        return response.text
+            usage = response.usage
 
-    except ServerError:
-        return (
-            "Sorry, the AI service is temporarily unavailable. "
-            "Please try again later."
-        )
+            print("=" * 50)
+            print("Prompt Tokens:", usage.prompt_tokens)
+            print("Completion Tokens:", usage.completion_tokens)
+            print("Total Tokens:", usage.total_tokens)
+            print("=" * 50)
+
+            return response.choices[0].message.content
+
+        except Exception as e:
+
+            print(f"Attempt {attempt + 1} failed: {e}")
+
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+            else:
+                return (
+                    "Sorry, the AI service is temporarily unavailable. "
+                    "Please try again later."
+                )
