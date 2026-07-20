@@ -1,14 +1,40 @@
+const ACCESS_TOKEN_KEY = "access_token";
+
+let socket = null;
+let socketConnecting = false;
+let historyLoaded = false;
+const pendingMessages = [];
+
+
+function setJsonResult(elementId, data) {
+    const element = document.getElementById(elementId);
+
+    if (!element) return;
+
+    element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+}
+
+
+function setTextResult(elementId, message) {
+    const element = document.getElementById(elementId);
+
+    if (!element) return;
+
+    element.textContent = message;
+}
+
+
 // ================= SIGNUP =================
 
 async function signup() {
 
-    let username = document.getElementById("signup_username").value;
-    let email = document.getElementById("signup_email").value;
-    let password = document.getElementById("signup_password").value;
+    const username = document.getElementById("signup_username").value;
+    const email = document.getElementById("signup_email").value;
+    const password = document.getElementById("signup_password").value;
 
     try {
 
-        let response = await fetch("http://127.0.0.1:8000/signup", {
+        const response = await fetch("/signup", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -20,15 +46,12 @@ async function signup() {
             })
         });
 
-        let data = await response.json();
-
-        document.getElementById("signup_message").innerHTML =
-            `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        const data = await response.json();
+        setJsonResult("signup_message", data);
 
     } catch (error) {
 
-        document.getElementById("signup_message").innerHTML =
-            "❌ Error: " + error.message;
+        setTextResult("signup_message", "Error: " + error.message);
     }
 }
 
@@ -37,12 +60,12 @@ async function signup() {
 
 async function login() {
 
-    let email = document.getElementById("login_email").value;
-    let password = document.getElementById("login_password").value;
+    const email = document.getElementById("login_email").value;
+    const password = document.getElementById("login_password").value;
 
     try {
 
-        let response = await fetch("http://127.0.0.1:8000/login", {
+        const response = await fetch("/login", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -53,28 +76,22 @@ async function login() {
             })
         });
 
-        let data = await response.json();
+        const data = await response.json();
+        setJsonResult("login_message", data);
 
-        document.getElementById("login_message").innerHTML =
-            `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        if (response.ok && data.access_token) {
 
-        // Save JWT token
-        if (data.access_token) {
-
-            localStorage.setItem("access_token", data.access_token);
+            localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
 
             setTimeout(() => {
                 window.location.href = "/static/chat.html";
-            }, 1000);
-
+            }, 600);
         }
 
     } catch (error) {
 
-        document.getElementById("login_message").innerHTML =
-            "❌ Error: " + error.message;
+        setTextResult("login_message", "Error: " + error.message);
     }
-
 }
 
 
@@ -82,35 +99,34 @@ async function login() {
 
 async function getUser() {
 
-    let id = document.getElementById("user_id").value;
+    const id = document.getElementById("user_id").value;
 
     try {
 
-        let response = await fetch(
-            `http://127.0.0.1:8000/users/${id}`
-        );
+        const response = await fetch(`/users/${encodeURIComponent(id)}`);
+        const data = await response.json();
 
-        let data = await response.json();
-
-        document.getElementById("user_result").innerHTML =
-            `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        setJsonResult("user_result", data);
 
     } catch (error) {
 
-        document.getElementById("user_result").innerHTML =
-            "❌ Error: " + error.message;
+        setTextResult("user_result", "Error: " + error.message);
     }
-
 }
 
 
 // ================= WEBSOCKET =================
 
-let socket = null;
+function getChatBox() {
+    return document.getElementById("chat-box");
+}
+
 
 function addMessage(text, sender) {
 
-    const chatBox = document.getElementById("chat-box");
+    const chatBox = getChatBox();
+
+    if (!chatBox) return;
 
     const message = document.createElement("div");
     message.className = `message ${sender}`;
@@ -125,85 +141,191 @@ function addMessage(text, sender) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+
+function renderHistory(messages) {
+
+    const chatBox = getChatBox();
+
+    if (!chatBox) return;
+
+    const pendingText = pendingMessages
+        .map((payload) => JSON.parse(payload).content)
+        .filter(Boolean);
+
+    chatBox.innerHTML = "";
+
+    messages.forEach((message) => {
+        const sender = message.role === "user" ? "user" : "bot";
+        addMessage(message.content, sender);
+    });
+
+    pendingText.forEach((message) => {
+        addMessage(message, "user");
+    });
+}
+
+
+function getWebSocketUrl(token) {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`;
+}
+
+
+function flushPendingMessages() {
+    while (
+        pendingMessages.length > 0 &&
+        socket &&
+        socket.readyState === WebSocket.OPEN
+    ) {
+        socket.send(pendingMessages.shift());
+    }
+}
+
+
+function handleSocketMessage(rawData) {
+
+    let data = null;
+
+    try {
+        data = JSON.parse(rawData);
+    } catch (error) {
+        addMessage(rawData, "bot");
+        return;
+    }
+
+    if (data.type === "history") {
+        renderHistory(data.messages || []);
+        historyLoaded = true;
+        flushPendingMessages();
+        return;
+    }
+
+    if (data.type === "message") {
+        const sender = data.role === "user" ? "user" : "bot";
+        addMessage(data.content || "", sender);
+        return;
+    }
+
+    if (data.type === "error") {
+        addMessage(data.content || "Something went wrong.", "bot");
+        return;
+    }
+
+    addMessage(data.content || rawData, "bot");
+}
+
+
 function connectSocket() {
 
-    const token = localStorage.getItem("access_token");
+    const chatBox = getChatBox();
 
-    socket = new WebSocket(
-        `ws://127.0.0.1:8000/ws?token=${token}`
-    );
+    if (!chatBox) return;
+
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+
+    if (!token) {
+        addMessage("Please log in first.", "bot");
+        setTimeout(() => {
+            window.location.href = "/";
+        }, 800);
+        return;
+    }
+
+    if (
+        socket &&
+        (
+            socket.readyState === WebSocket.OPEN ||
+            socket.readyState === WebSocket.CONNECTING
+        )
+    ) {
+        return;
+    }
+
+    socketConnecting = true;
+    historyLoaded = false;
+    socket = new WebSocket(getWebSocketUrl(token));
 
     socket.onopen = function () {
-
-        addMessage("Connected ✅", "bot");
-
+        socketConnecting = false;
     };
 
     socket.onmessage = function (event) {
-
-        addMessage(event.data, "bot");
-
+        handleSocketMessage(event.data);
     };
 
-    socket.onclose = function () {
+    socket.onclose = function (event) {
+        socketConnecting = false;
 
-        addMessage("Connection Closed ❌", "bot");
+        if (event.code === 1008) {
+            localStorage.removeItem(ACCESS_TOKEN_KEY);
+            addMessage("Your session expired. Please log in again.", "bot");
+            setTimeout(() => {
+                window.location.href = "/";
+            }, 1000);
+            return;
+        }
 
+        if (event.code !== 1000) {
+            addMessage("Connection closed. Please refresh the page.", "bot");
+        }
     };
 
     socket.onerror = function () {
-
-        addMessage("Connection Error ❌", "bot");
-
+        socketConnecting = false;
+        addMessage("Connection error. Please try again.", "bot");
     };
-
 }
+
 
 function sendMessage() {
 
     const input = document.getElementById("ws_message");
+
+    if (!input) return;
+
     const message = input.value.trim();
 
     if (message === "") return;
 
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
+    input.value = "";
+    addMessage(message, "user");
 
-        connectSocket();
+    const payload = JSON.stringify({
+        type: "message",
+        content: message
+    });
 
-        socket.onopen = function () {
-
-            addMessage("Connected ✅", "bot");
-
-            socket.send(message);
-
-            addMessage(message, "user");
-
-        };
-
-    } else {
-
-        socket.send(message);
-
-        addMessage(message, "user");
-
+    if (
+        socket &&
+        socket.readyState === WebSocket.OPEN &&
+        historyLoaded
+    ) {
+        socket.send(payload);
+        return;
     }
 
-    input.value = "";
+    pendingMessages.push(payload);
 
+    if (!socketConnecting) {
+        connectSocket();
+    }
 }
+
 
 document.addEventListener("DOMContentLoaded", () => {
 
     const input = document.getElementById("ws_message");
 
-    input.addEventListener("keypress", function (e) {
+    if (input) {
+        input.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+    }
 
-        if (e.key === "Enter") {
-
-            sendMessage();
-
-        }
-
-    });
-
+    if (getChatBox()) {
+        connectSocket();
+    }
 });

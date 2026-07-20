@@ -10,7 +10,7 @@ from app.core.database import Base
 # Import models so Alembic can detect tables
 from app.modules.chat import models
 from app.modules.auth import models as auth_models
-
+from app.modules.library import models as library_models
 
 config = context.config
 

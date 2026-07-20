@@ -11,11 +11,9 @@
 
 <div class="container">
 
-    <h1>💬 AI Assistant</h1>
+    <h1>AI Assistant</h1>
 
-    <div id="chat-box" class="chat-box">
-
-    </div>
+    <div id="chat-box" class="chat-box"></div>
 
     <div class="chat-input">
 
@@ -23,7 +21,6 @@
             id="ws_message"
             type="text"
             placeholder="Type your message..."
-            onkeypress="if(event.key==='Enter') sendMessage()"
         >
 
         <button onclick="sendMessage()">

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management</title>
+
+    <link rel="stylesheet" href="library.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>📚 Library Management System</h1>
+
+    <!-- ================= SEARCH ================= -->
+
+    <div class="card">
+
+        <h2>Search Books</h2>
+
+        <input
+            type="text"
+            id="search_query"
+            placeholder="Search by title, author or genre"
+        >
+
+        <button onclick="searchBooks()">
+            Search
+        </button>
+
+    </div>
+
+
+    <!-- ================= AVAILABILITY ================= -->
+
+    <div class="card">
+
+        <h2>Check Availability</h2>
+
+        <input
+            type="number"
+            id="check_book_id"
+            placeholder="Book ID"
+        >
+
+        <button onclick="checkAvailability()">
+            Check
+        </button>
+
+    </div>
+
+
+    <!-- ================= BORROW ================= -->
+
+    <div class="card">
+
+        <h2>Borrow Book</h2>
+
+        <input
+            type="number"
+            id="borrow_user_id"
+            placeholder="User ID"
+        >
+
+        <input
+            type="number"
+            id="borrow_book_id"
+            placeholder="Book ID"
+        >
+
+        <button onclick="borrowBook()">
+            Borrow
+        </button>
+
+    </div>
+
+
+    <!-- ================= RETURN ================= -->
+
+    <div class="card">
+
+        <h2>Return Book</h2>
+
+        <input
+            type="number"
+            id="return_loan_id"
+            placeholder="Loan ID"
+        >
+
+        <button onclick="returnBook()">
+            Return
+        </button>
+
+    </div>
+
+
+    <!-- ================= OUTPUT ================= -->
+
+    <div class="card">
+
+        <h2>Response</h2>
+
+        <pre id="output"></pre>
+
+    </div>
+
+</div>
+
+<script src="library.js"></script>
+
+</body>
+</html>

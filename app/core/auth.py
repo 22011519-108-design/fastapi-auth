@@ -1,61 +1,19 @@
-from datetime import datetime, timedelta, timezone
+from typing import Any
 
-from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from app.core.config import (
-    SECRET_KEY,
-    ALGORITHM,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
-)
+from app.core.security import verify_access_token
 
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/login"
+    tokenUrl="/token"
 )
 
 
-def create_access_token(data: dict):
-    """
-    Create JWT access token.
-    """
-
-    to_encode = data.copy()
-
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-
-    to_encode.update({"exp": expire})
-
-    encoded_jwt = jwt.encode(
-        to_encode,
-        SECRET_KEY,
-        algorithm=ALGORITHM
-    )
-
-    return encoded_jwt
-
-
-def verify_access_token(token: str):
-
-    try:
-        payload = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM]
-        )
-
-        return payload
-
-    except JWTError:
-        return None
-
-
-def get_current_user(
+def get_current_user_payload(
     token: str = Depends(oauth2_scheme)
-):
+) -> dict[str, Any]:
 
     payload = verify_access_token(token)
 
@@ -68,12 +26,31 @@ def get_current_user(
             },
         )
 
-    email = payload.get("sub")
-
-    if email is None:
+    if payload.get("sub") is None:
         raise HTTPException(
             status_code=401,
             detail="Invalid token"
         )
 
-    return email
+    return payload
+
+
+def get_current_user(
+    payload: dict[str, Any] = Depends(get_current_user_payload)
+) -> str:
+    return payload["sub"]
+
+
+def get_current_user_id(
+    payload: dict[str, Any] = Depends(get_current_user_payload)
+) -> int:
+    try:
+        return int(payload["user_id"])
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token does not contain a valid user_id",
+            headers={
+                "WWW-Authenticate": "Bearer"
+            },
+        )

@@ -1,10 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.auth import get_current_user_id
 from app.core.dependencies import get_db
 from app.modules.chat.schemas import ChatRequest, ChatResponse
-from app.modules.chat.models import ChatSession, ChatMessage
-from app.modules.chat.services import build_messages, generate_response
+from app.modules.chat.services import (
+    build_messages,
+    generate_response,
+    get_chat_history,
+    get_or_create_session,
+    save_message,
+)
 
 router = APIRouter(
     prefix="/chat",
@@ -13,52 +19,43 @@ router = APIRouter(
 
 
 @router.post("/", response_model=ChatResponse)
-def chat(request: ChatRequest, db: Session = Depends(get_db)):
+def chat(
+    request: ChatRequest,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id)
+):
 
-    # Create a new session if no session_id is provided
-    if request.session_id is None:
+    user_text = request.message.strip()
 
-        session = ChatSession(
-            user_id=1,
+    if not user_text:
+        raise HTTPException(
+            status_code=400,
+            detail="Message cannot be empty."
+        )
+
+    try:
+        session = get_or_create_session(
+            db=db,
+            user_id=current_user_id,
+            session_id=request.session_id,
             title="New Chat"
         )
-
-        db.add(session)
-        db.commit()
-        db.refresh(session)
-
-    # Otherwise fetch the existing session
-    else:
-
-        session = (
-            db.query(ChatSession)
-            .filter(ChatSession.id == request.session_id)
-            .first()
+    except ValueError:
+        raise HTTPException(
+            status_code=404,
+            detail="Chat session not found."
         )
 
-        if not session:
-            raise HTTPException(
-                status_code=404,
-                detail="Chat session not found."
-            )
-
     # Save user message
-    user_message = ChatMessage(
+    save_message(
+        db=db,
         session_id=session.id,
         role="user",
-        content=request.message
+        content=user_text
     )
-
-    db.add(user_message)
-    db.commit()
 
     # Load complete chat history
-    history = (
-        db.query(ChatMessage)
-        .filter(ChatMessage.session_id == session.id)
-        .order_by(ChatMessage.created_at)
-        .all()
-    )
+    history = get_chat_history(db, session.id)
 
     # Convert history into LLM format
     messages = build_messages(history)
@@ -67,14 +64,12 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     assistant_response = generate_response(messages)
 
     # Save assistant response
-    assistant_message = ChatMessage(
+    save_message(
+        db=db,
         session_id=session.id,
         role="assistant",
         content=assistant_response
     )
-
-    db.add(assistant_message)
-    db.commit()
 
     return ChatResponse(
         session_id=session.id,
