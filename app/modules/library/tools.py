@@ -90,3 +90,7 @@ def return_book_tool(
         db=db,
         loan_id=request.loan_id
     )
+
+def dashboard_stats_tool(db: Session):
+
+    return services.get_dashboard_stats(db)

@@ -1,114 +1,324 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Library Management</title>
 
-    <link rel="stylesheet" href="library.css">
+    <title>AI Library Management</title>
+
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/library.css">
+
 </head>
 
 <body>
 
-<div class="container">
+<div class="dashboard">
 
-    <h1>📚 Library Management System</h1>
+    <!-- ================= SIDEBAR ================= -->
 
-    <!-- ================= SEARCH ================= -->
+    <aside class="sidebar">
 
-    <div class="card">
+        <div class="logo">
+            <i class="fa-solid fa-book-open"></i>
+            <span>ZYLO Library</span>
+        </div>
 
-        <h2>Search Books</h2>
+        <nav>
 
-        <input
-            type="text"
-            id="search_query"
-            placeholder="Search by title, author or genre"
-        >
+            <a href="#">
+                <i class="fa-solid fa-chart-line"></i>
+                Dashboard
+            </a>
 
-        <button onclick="searchBooks()">
-            Search
-        </button>
+            <a href="#" class="active">
+                <i class="fa-solid fa-book"></i>
+                Library
+            </a>
 
-    </div>
+            <a href="/">
+                <i class="fa-solid fa-comments"></i>
+                AI Chat
+            </a>
 
+            <a href="#">
+                <i class="fa-solid fa-users"></i>
+                Users
+            </a>
 
-    <!-- ================= AVAILABILITY ================= -->
+            <a href="#">
+                <i class="fa-solid fa-gear"></i>
+                Settings
+            </a>
 
-    <div class="card">
+        </nav>
 
-        <h2>Check Availability</h2>
+    </aside>
 
-        <input
-            type="number"
-            id="check_book_id"
-            placeholder="Book ID"
-        >
+    <!-- ================= MAIN ================= -->
 
-        <button onclick="checkAvailability()">
-            Check
-        </button>
+    <main class="main-content">
 
-    </div>
+        <!-- HEADER -->
 
+        <header class="topbar">
 
-    <!-- ================= BORROW ================= -->
+            <div>
 
-    <div class="card">
+                <h1>ZYLO Library Management</h1>
 
-        <h2>Borrow Book</h2>
+                <p>
+                    Search, borrow and manage books efficiently.
+                </p>
 
-        <input
-            type="number"
-            id="borrow_user_id"
-            placeholder="User ID"
-        >
+            </div>
 
-        <input
-            type="number"
-            id="borrow_book_id"
-            placeholder="Book ID"
-        >
+            <div class="profile">
 
-        <button onclick="borrowBook()">
-            Borrow
-        </button>
+                <i class="fa-solid fa-user-circle"></i>
 
-    </div>
+                <span>Admin</span>
 
+            </div>
 
-    <!-- ================= RETURN ================= -->
+        </header>
 
-    <div class="card">
+        <!-- STATISTICS -->
 
-        <h2>Return Book</h2>
+        <section class="stats">
 
-        <input
-            type="number"
-            id="return_loan_id"
-            placeholder="Loan ID"
-        >
+            <div class="stat-card">
+                <i class="fa-solid fa-book"></i>
 
-        <button onclick="returnBook()">
-            Return
-        </button>
+                <h2>Total Books</h2>
 
-    </div>
+                <p id="totalBooks">250</p>
+            </div>
 
+            <div class="stat-card">
 
-    <!-- ================= OUTPUT ================= -->
+                <i class="fa-solid fa-users"></i>
 
-    <div class="card">
+                <h2>Users</h2>
 
-        <h2>Response</h2>
+                <p id="totalUsers">0</p>
 
-        <pre id="output"></pre>
+            </div>
 
-    </div>
+            <div class="stat-card">
+
+                <i class="fa-solid fa-book-open-reader"></i>
+
+                <h2>Borrowed</h2>
+
+                <p id="borrowedBooks">0</p>
+
+            </div>
+
+            <div class="stat-card">
+
+                <i class="fa-solid fa-circle-check"></i>
+
+                <h2>Available</h2>
+
+                <p id="availableBooks">0</p>
+
+            </div>
+
+        </section>
+
+        <!-- SEARCH -->
+
+        <section class="card">
+
+            <h2>
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                Search Books
+
+            </h2>
+
+            <div class="search-bar">
+
+                <input
+                        type="text"
+                        id="search_query"
+                        placeholder="Search by title, author or genre">
+
+                <button onclick="searchBooks()">
+
+                    <i class="fa-solid fa-search"></i>
+
+                    Search
+
+                </button>
+
+            </div>
+
+        </section>
+
+        <!-- RESULTS -->
+
+        <section class="card">
+
+            <h2>
+
+                <i class="fa-solid fa-table"></i>
+
+                Search Results
+
+            </h2>
+
+            <div class="table-container">
+
+                <table id="resultsTable">
+
+                    <thead>
+
+                    <tr>
+
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>Genre</th>
+                        <th>Copies</th>
+
+                    </tr>
+
+                    </thead>
+
+                    <tbody id="resultsBody">
+
+                    <tr>
+
+                        <td colspan="5">
+
+                            Search for books to display results.
+
+                        </td>
+
+                    </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+        <!-- ACTIONS -->
+
+        <section class="action-grid">
+
+            <!-- CHECK -->
+
+            <div class="card">
+
+                 <h2>
+                    <i class="fa-solid fa-circle-check"></i>
+                     Check Availability
+                </h2>
+
+                <input
+                    type="number"
+                    id="check_book_id"
+                    placeholder="Enter Book ID"
+                >
+
+                <button onclick="checkAvailability()">
+                    Check Availability
+                </button>
+
+                <div id="availabilityResult" class="availability-result"></div>
+
+            </div>
+
+            <!-- BORROW -->
+
+            <div class="card">
+
+                <h2>
+                    
+                    <i class="fa-solid fa-book-open"></i>
+                    Borrow Book
+                </h2>
+
+                <input
+                    type="number"
+                    id="borrow_user_id"
+                    placeholder="Enter User ID">
+
+                <input
+                    type="number"
+                    id="borrow_book_id"
+                    placeholder="Enter Book ID">
+
+                <button onclick="borrowBook()">
+                    Borrow Book
+                </button>
+
+                <div id="borrowResult" class="result-box"></div>
+
+            </div>
+
+            <!-- RETURN -->
+
+            <div class="card">
+
+                <h2>
+                    <i class="fa-solid fa-rotate-left"></i>
+                    Return Book
+                </h2>
+
+                <input
+                    type="number"
+                    id="return_loan_id"
+                    placeholder="Enter Loan ID">
+
+                <button onclick="returnBook()">
+                    Return Book
+                </button>
+
+                <div id="returnResult" class="result-box"></div>
+
+            </div>
+
+        <!-- RESPONSE -->
+
+        <section class="card">
+
+            <h2>
+
+                <i class="fa-solid fa-terminal"></i>
+
+                System Response
+
+            </h2>
+
+            <pre id="output"></pre>
+
+        </section>
+
+    </main>
 
 </div>
 
-<script src="library.js"></script>
+<script src="/static/library.js"></script>
 
 </body>
+
 </html>

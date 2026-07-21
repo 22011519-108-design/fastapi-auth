@@ -183,3 +183,29 @@ def return_book(
         "message": "Book returned successfully.",
         "book": book.title
     }
+
+def get_dashboard_stats(db: Session):
+
+    total_books = db.query(Book).count()
+
+    total_users = db.query(User).count()
+
+    borrowed = (
+        db.query(Loan)
+        .filter(Loan.status == "borrowed")
+        .count()
+    )
+
+    available = (
+        db.query(Book.available_copies)
+        .all()
+    )
+
+    available = sum(book[0] for book in available)
+
+    return {
+        "total_books": total_books,
+        "total_users": total_users,
+        "borrowed_books": borrowed,
+        "available_books": available
+    }

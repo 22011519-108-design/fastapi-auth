@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-
+from app.modules.library.tools import dashboard_stats_tool
 from app.modules.library.schemas import (
     SearchBooksRequest,
     CheckAvailabilityRequest,
@@ -15,6 +15,7 @@ from app.modules.library.tools import (
     check_availability_tool,
     borrow_book_tool,
     return_book_tool,
+    dashboard_stats_tool,
 )
 
 router = APIRouter(
@@ -53,3 +54,9 @@ def return_book(
     db: Session = Depends(get_db)
 ):
     return return_book_tool(request, db)
+
+@router.get("/stats")
+def dashboard_stats(
+    db: Session = Depends(get_db)
+):
+    return dashboard_stats_tool(db)
