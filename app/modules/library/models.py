@@ -19,7 +19,7 @@ class Book(Base):
     title = Column(String, nullable=False, index=True)
     author = Column(String, nullable=False)
     genre = Column(String, nullable=False)
-
+    description = Column(String, nullable=True)
     total_copies = Column(Integer, nullable=False)
     available_copies = Column(Integer, nullable=False)
 

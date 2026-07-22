@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import GROQ_API_KEY, GROQ_MODEL
 from app.modules.chat.models import ChatMessage, ChatSession
-
+from app.modules.rag.services import search_documents
 try:
     from groq import Groq
 except ImportError:
@@ -22,13 +22,13 @@ AI_UNAVAILABLE_MESSAGE = (
 _groq_client: Any | None = None
 
 SYSTEM_PROMPT = """
-You are a helpful AI assistant.
+You are an AI-powered Library Assistant.
 
 Instructions:
-- Answer clearly and accurately.
-- Be polite and professional.
-- Maintain conversation context.
-- If you don't know the answer, say so instead of guessing.
+- Answer using the provided library context whenever possible.
+- Recommend books based on the retrieved information.
+- If the answer is not available in the library context, clearly state that and then provide a general answer if appropriate.
+- Be polite, professional, and concise.
 """
 
 
@@ -206,6 +206,29 @@ def moderate_input(user_input: str) -> tuple[bool, str]:
 
     return True, ""
 
+def build_rag_context(query: str) -> str:
+    """
+    Retrieve relevant book information from FAISS.
+    """
+
+    results = search_documents(query, k=3)
+
+    if not results:
+        return ""
+
+    context = "Library Context:\n\n"
+
+    for item in results:
+
+        metadata = item["metadata"]
+
+        context += (
+            f"Title: {metadata['title']}\n"
+            f"Description: {metadata['text']}\n\n"
+        )
+
+    return context
+
 def generate_response(messages: list[dict]) -> str:
     """
     Generate AI response using Groq.
@@ -220,6 +243,10 @@ def generate_response(messages: list[dict]) -> str:
             break
 
     is_safe, moderation_message = moderate_input(user_message)
+    rag_context = ""
+
+    if user_message.strip():
+        rag_context = build_rag_context(user_message)
 
     if not is_safe:
         logger.warning(
@@ -234,9 +261,19 @@ def generate_response(messages: list[dict]) -> str:
 
         try:
 
+            llm_messages = messages.copy()
+
+            if rag_context:
+                llm_messages.insert(
+                    1,
+                    {
+                        "role": "system",
+                        "content": rag_context,
+                    },
+                )
             response = get_groq_client().chat.completions.create(
                 model=GROQ_MODEL,
-                messages=messages,
+                messages=llm_messages,
                 temperature=0.7,
                 max_tokens=500,
             )
