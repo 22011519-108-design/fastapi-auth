@@ -32,8 +32,11 @@ def run_evaluation(
         question = item["question"]
         expected = item["expected"]
 
-        retrieved = search_documents(question, k=top_k)
-
+        retrieved = search_documents(
+            question,
+            k=top_k,
+            retrieval=retrieval
+        )
         retrieved_titles = [
             r["metadata"]["title"]
             for r in retrieved
@@ -52,7 +55,7 @@ def run_evaluation(
 
             print(
                 f"{i}. {r['metadata']['title']} "
-                f"(distance={r['distance']:.4f})"
+                f"(score={r.get('score', r.get('distance')):.4f})"
             )
 
         print("Hit :", hit)
