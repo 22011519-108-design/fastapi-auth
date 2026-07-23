@@ -1,9 +1,10 @@
+import json
 import logging
 import time
 from typing import Any
 
 from sqlalchemy.orm import Session
-
+from app.modules.library.prompts import LIBRARY_SYSTEM_PROMPT
 from app.core.config import GROQ_API_KEY, GROQ_MODEL
 from app.modules.chat.models import ChatMessage, ChatSession
 from app.modules.rag.services import search_documents
@@ -21,16 +22,7 @@ AI_UNAVAILABLE_MESSAGE = (
 
 _groq_client: Any | None = None
 
-SYSTEM_PROMPT = """
-You are an AI-powered Library Assistant.
-
-Instructions:
-- Answer using the provided library context whenever possible.
-- Recommend books based on the retrieved information.
-- If the answer is not available in the library context, clearly state that and then provide a general answer if appropriate.
-- Be polite, professional, and concise.
-"""
-
+SYSTEM_PROMPT = LIBRARY_SYSTEM_PROMPT
 
 def get_or_create_session(
     db: Session,
@@ -97,8 +89,11 @@ def save_message(
     db: Session,
     session_id: int,
     role: str,
-    content: str
+    content: Any
 ) -> ChatMessage:
+    if isinstance(content, (dict, list)):
+        content = json.dumps(content)
+
     message = ChatMessage(
         session_id=session_id,
         role=role,

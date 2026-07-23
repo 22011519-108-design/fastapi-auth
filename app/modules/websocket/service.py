@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 from json import JSONDecodeError
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -16,6 +17,10 @@ from app.modules.chat.services import (
     get_latest_or_create_session,
     save_message,
     serialize_history,
+)
+from app.modules.agents.orchestrator import (
+    run_orchestrator,
+    classify_request,
 )
 
 logger = logging.getLogger(__name__)
@@ -62,6 +67,9 @@ async def websocket_service(websocket: WebSocket, user_id: int):
             raw_message = await websocket.receive_text()
             user_text = parse_client_message(raw_message)
 
+            print("\n" + "=" * 60)
+            print("USER MESSAGE:", user_text)
+
             if not user_text:
                 await manager.send_json(
                     websocket,
@@ -79,26 +87,60 @@ async def websocket_service(websocket: WebSocket, user_id: int):
                 content=user_text
             )
 
-            # Load history
             history = get_chat_history(db, session.id)
-
             messages = build_messages(history)
 
-            # AI Response
-            assistant_reply = await run_in_threadpool(
-                generate_response,
-                messages
+            print("History loaded:", len(history))
+
+            agent_type = classify_request(user_text)
+            print("Agent selected:", agent_type)
+
+            if agent_type == "catalog":
+
+                print("Running Catalog Agent...")
+
+                assistant_reply = await run_in_threadpool(
+                    run_orchestrator,
+                    agent_type="catalog",
+                    payload={
+                        "tool": "search_books",
+                        "arguments": {
+                            "query": user_text
+                        }
+                    },
+                    db=db
+                )
+
+            else:
+
+                print("Running Policy Agent...")
+
+                assistant_reply = await run_in_threadpool(
+                    run_orchestrator,
+                    agent_type="policy",
+                    payload={
+                        "query": user_text
+                    },
+                    db=db
+                )
+
+            print("Assistant Reply:")
+            print(assistant_reply)
+            print("=" * 60)
+
+            db_content = (
+                json.dumps(assistant_reply)
+                if isinstance(assistant_reply, dict)
+                else assistant_reply
             )
 
-            # Save assistant reply
             save_message(
                 db=db,
                 session_id=session.id,
                 role="assistant",
-                content=assistant_reply
+                content=db_content
             )
 
-            # Send to frontend
             await manager.send_json(
                 websocket,
                 {
@@ -110,10 +152,15 @@ async def websocket_service(websocket: WebSocket, user_id: int):
             )
 
     except WebSocketDisconnect:
-
+        print("WebSocket disconnected.")
         await manager.disconnect()
 
-    except Exception:
+    except Exception as e:
+
+        print("\n" + "=" * 60)
+        print("ERROR INSIDE WEBSOCKET SERVICE")
+        traceback.print_exc()
+        print("=" * 60)
 
         logger.exception("WebSocket chat service failed")
 
@@ -122,7 +169,7 @@ async def websocket_service(websocket: WebSocket, user_id: int):
                 websocket,
                 {
                     "type": "error",
-                    "content": "Chat connection failed. Please reconnect."
+                    "content": str(e)
                 }
             )
             await websocket.close(code=1011)
@@ -130,5 +177,4 @@ async def websocket_service(websocket: WebSocket, user_id: int):
             pass
 
     finally:
-
         db.close()

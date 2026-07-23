@@ -4,8 +4,13 @@ from app.modules.library.schemas import SearchBooksRequest
 from app.modules.library.schemas import CheckAvailabilityRequest
 from app.modules.library import services
 from app.modules.library.schemas import BorrowBookRequest
-from app.modules.library.schemas import ReturnBookRequest
-
+from app.modules.library.schemas import (
+    SearchBooksRequest,
+    CheckAvailabilityRequest,
+    BorrowBookRequest,
+    ReturnBookRequest,
+    GetBorrowedBooksRequest,
+)
 def search_books_tool(request: SearchBooksRequest, db: Session):
     """
     Tool: Search books in the library.
@@ -90,6 +95,24 @@ def return_book_tool(
         db=db,
         loan_id=request.loan_id
     )
+
+def get_my_borrowed_books_tool(
+    request: GetBorrowedBooksRequest,
+    db: Session
+):
+    """
+    Tool: Get all currently borrowed books for a user.
+    """
+
+    books = services.get_my_borrowed_books(
+        db=db,
+        user_id=request.user_id
+    )
+
+    return {
+        "count": len(books),
+        "books": books
+    }
 
 def dashboard_stats_tool(db: Session):
 

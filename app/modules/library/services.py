@@ -1,19 +1,16 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import or_
-
-from app.modules.library.models import Book
 from datetime import datetime, timedelta
-from app.modules.library.models import Book, Loan
-from app.modules.auth.models import User
 
-from datetime import datetime
+from sqlalchemy import or_
+from sqlalchemy.orm import Session
+
+from app.modules.auth.models import User
+from app.modules.library.models import Book, Loan
 
 
 def search_books(db: Session, query: str):
     """
     Search books by title, author, or genre.
     """
-
     books = (
         db.query(Book)
         .filter(
@@ -28,18 +25,17 @@ def search_books(db: Session, query: str):
 
     return books
 
+
 def check_availability(db: Session, book_id: int):
     """
     Check if a book is available.
     """
-
-    book = (
+    return (
         db.query(Book)
         .filter(Book.id == book_id)
         .first()
     )
 
-    return book
 
 def borrow_book(
     db: Session,
@@ -63,7 +59,6 @@ def borrow_book(
             "message": "User not found."
         }
 
-
     # Check book
     book = (
         db.query(Book)
@@ -77,16 +72,31 @@ def borrow_book(
             "message": "Book not found."
         }
 
-
-    # Check copies
+    # Check availability
     if book.available_copies <= 0:
         return {
             "success": False,
             "message": "Book is not available."
         }
 
+    # Check if already borrowed
+    existing_loan = (
+        db.query(Loan)
+        .filter(
+            Loan.user_id == user_id,
+            Loan.book_id == book_id,
+            Loan.status == "borrowed"
+        )
+        .first()
+    )
 
-    # Check active loans
+    if existing_loan:
+        return {
+            "success": False,
+            "message": "You have already borrowed this book."
+        }
+
+    # Check borrowing limit
     active_loans = (
         db.query(Loan)
         .filter(
@@ -96,13 +106,11 @@ def borrow_book(
         .count()
     )
 
-
     if active_loans >= 3:
         return {
             "success": False,
             "message": "Maximum borrowing limit reached (3 books)."
         }
-
 
     # Create loan
     loan = Loan(
@@ -113,25 +121,30 @@ def borrow_book(
         status="borrowed"
     )
 
+    try:
+        db.add(loan)
 
-    db.add(loan)
+        # Decrease available copies
+        book.available_copies -= 1
 
+        db.commit()
+        db.refresh(loan)
 
-    # Decrease copies
-    book.available_copies -= 1
+        return {
+            "success": True,
+            "message": "Book borrowed successfully.",
+            "loan_id": loan.id,
+            "book": book.title,
+            "due_date": loan.due_date
+        }
 
+    except Exception as e:
+        db.rollback()
 
-    db.commit()
-    db.refresh(loan)
-
-
-    return {
-        "success": True,
-        "message": "Book borrowed successfully.",
-        "loan_id": loan.id,
-        "book": book.title,
-        "due_date": loan.due_date
-    }
+        return {
+            "success": False,
+            "message": f"Error borrowing book: {str(e)}"
+        }
 
 
 def return_book(
@@ -142,7 +155,6 @@ def return_book(
     Return a borrowed book.
     """
 
-    # Find loan
     loan = (
         db.query(Loan)
         .filter(Loan.id == loan_id)
@@ -155,34 +167,76 @@ def return_book(
             "message": "Loan not found."
         }
 
-    # Already returned?
     if loan.status == "returned":
         return {
             "success": False,
             "message": "Book has already been returned."
         }
 
-    # Find book
     book = (
         db.query(Book)
         .filter(Book.id == loan.book_id)
         .first()
     )
 
-    # Update loan
-    loan.status = "returned"
-    loan.returned_at = datetime.utcnow()
+    try:
+        loan.status = "returned"
+        loan.returned_at = datetime.utcnow()
 
-    # Increase copies
-    book.available_copies += 1
+        book.available_copies += 1
 
-    db.commit()
+        db.commit()
 
-    return {
-        "success": True,
-        "message": "Book returned successfully.",
-        "book": book.title
-    }
+        return {
+            "success": True,
+            "message": "Book returned successfully.",
+            "book": book.title
+        }
+
+    except Exception as e:
+        db.rollback()
+
+        return {
+            "success": False,
+            "message": f"Error returning book: {str(e)}"
+        }
+
+def get_my_borrowed_books(
+    db: Session,
+    user_id: int
+):
+    """
+    Get all active borrowed books for a user.
+    """
+
+    loans = (
+        db.query(Loan)
+        .filter(
+            Loan.user_id == user_id,
+            Loan.status == "borrowed"
+        )
+        .all()
+    )
+
+    if not loans:
+        return []
+
+    borrowed_books = []
+
+    for loan in loans:
+        borrowed_books.append(
+            {
+                "loan_id": loan.id,
+                "book_id": loan.book.id,
+                "title": loan.book.title,
+                "author": loan.book.author,
+                "due_date": loan.due_date,
+                "borrowed_at": loan.borrowed_at,
+            }
+        )
+
+    return borrowed_books       
+
 
 def get_dashboard_stats(db: Session):
 

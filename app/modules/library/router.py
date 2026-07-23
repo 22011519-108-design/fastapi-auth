@@ -8,6 +8,7 @@ from app.modules.library.schemas import (
     CheckAvailabilityRequest,
     BorrowBookRequest,
     ReturnBookRequest,
+    GetBorrowedBooksRequest,
 )
 
 from app.modules.library.tools import (
@@ -15,6 +16,7 @@ from app.modules.library.tools import (
     check_availability_tool,
     borrow_book_tool,
     return_book_tool,
+    get_my_borrowed_books_tool,
     dashboard_stats_tool,
 )
 
@@ -55,6 +57,13 @@ def return_book(
 ):
     return return_book_tool(request, db)
 
+@router.post("/my-books")
+def get_my_borrowed_books(
+    request: GetBorrowedBooksRequest,
+    db: Session = Depends(get_db)
+):
+    return get_my_borrowed_books_tool(request, db)
+    
 @router.get("/stats")
 def dashboard_stats(
     db: Session = Depends(get_db)

@@ -5,7 +5,6 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.database import Base, engine
 # Import models so SQLAlchemy registers tables
-# Import models so SQLAlchemy registers tables
 from app.modules.auth import models as auth_models
 from app.modules.chat import models as chat_models
 from app.modules.library import models as library_models

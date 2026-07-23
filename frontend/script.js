@@ -122,25 +122,33 @@ function getChatBox() {
 }
 
 
-function addMessage(text, sender) {
+function addMessage(message, sender) {
 
-    const chatBox = getChatBox();
+    const chatBox = document.getElementById("chat-box");
 
     if (!chatBox) return;
 
-    const message = document.createElement("div");
-    message.className = `message ${sender}`;
+    let displayText = message;
 
-    const bubble = document.createElement("div");
-    bubble.className = "bubble";
-    bubble.innerText = text;
+    if (typeof message === "object") {
 
-    message.appendChild(bubble);
-    chatBox.appendChild(message);
+        displayText =
+            message.response ||
+            message.message ||
+            message.answer ||
+            message.content ||
+            JSON.stringify(message, null, 2);
+
+    }
+
+    chatBox.innerHTML += `
+        <div class="${sender}">
+            <pre>${displayText}</pre>
+        </div>
+    `;
 
     chatBox.scrollTop = chatBox.scrollHeight;
 }
-
 
 function renderHistory(messages) {
 
@@ -188,30 +196,74 @@ function handleSocketMessage(rawData) {
 
     try {
         data = JSON.parse(rawData);
+
     } catch (error) {
         addMessage(rawData, "bot");
         return;
     }
 
+
+    console.log("BACKEND RESPONSE:", data);
+
+
     if (data.type === "history") {
+
         renderHistory(data.messages || []);
+
         historyLoaded = true;
+
         flushPendingMessages();
+
         return;
     }
+
 
     if (data.type === "message") {
+
         const sender = data.role === "user" ? "user" : "bot";
-        addMessage(data.content || "", sender);
+
+
+        let content = data.content;
+
+
+        if (typeof content === "object") {
+
+            content =
+                content.response ||
+                content.message ||
+                content.answer ||
+                JSON.stringify(content, null, 2);
+
+        }
+
+
+        addMessage(content || "No response", sender);
+
         return;
     }
+
 
     if (data.type === "error") {
-        addMessage(data.content || "Something went wrong.", "bot");
+
+        addMessage(
+            data.content || "Something went wrong.",
+            "bot"
+        );
+
         return;
     }
 
-    addMessage(data.content || rawData, "bot");
+    let fallback = data.content || rawData;
+
+
+    if (typeof fallback === "object") {
+
+        fallback = JSON.stringify(fallback, null, 2);
+
+    }
+
+
+    addMessage(fallback, "bot");
 }
 
 
